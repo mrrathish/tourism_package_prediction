@@ -1,5 +1,5 @@
-# Use a minimal base image with Python 3.9 installed
-FROM python:3.9
+# Use Python 3.11 for better compatibility
+FROM python:3.11-slim
 
 # Set the working directory inside the container to /app
 WORKDIR /app
@@ -8,12 +8,12 @@ WORKDIR /app
 COPY . .
 
 # Install Python dependencies listed in requirements.txt
-RUN pip3 install -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 RUN useradd -m -u 1000 user
 USER user
 ENV HOME=/home/user \
-	PATH=/home/user/.local/bin:$PATH
+    PATH=/home/user/.local/bin:$PATH
 
 WORKDIR $HOME/app
 
