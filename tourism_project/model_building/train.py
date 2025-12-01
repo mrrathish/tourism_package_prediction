@@ -17,10 +17,10 @@ mlflow.set_experiment("tourism-customer-prediction-experiment")
 
 api = HfApi()
 
-Xtrain_path = "hf://datasets/Retheesh/tourism_package_prediction/Xtrain.csv"
-Xtest_path = "hf://datasets/Retheesh/tourism_package_prediction/Xtest.csv"
-ytrain_path = "hf://datasets/Retheesh/tourism_package_prediction/ytrain.csv"
-ytest_path = "hf://datasets/Retheesh/tourism_package_prediction/ytest.csv"
+Xtrain_path = "hf://datasets/Retheesh/tourism-customer-prediction/Xtrain.csv"
+Xtest_path = "hf://datasets/Retheesh/tourism-customer-prediction/Xtest.csv"
+ytrain_path = "hf://datasets/Retheesh/tourism-customer-prediction/ytrain.csv"
+ytest_path = "hf://datasets/Retheesh/tourism-customer-prediction/ytest.csv"
 
 Xtrain = pd.read_csv(Xtrain_path)
 Xtest = pd.read_csv(Xtest_path)
@@ -49,20 +49,19 @@ preprocessor = make_column_transformer(
 # Define Random Forest Classifier
 rf_model = RandomForestClassifier(random_state=42, n_jobs=-1)
 
-# Hyperparameter grid
+# Simplified hyperparameter grid for faster execution
 param_grid = {
-    'randomforestclassifier__n_estimators': [100, 200],
-    'randomforestclassifier__max_depth': [10, 20, None],
-    'randomforestclassifier__min_samples_split': [2, 5],
-    'randomforestclassifier__min_samples_leaf': [1, 2]
+    'randomforestclassifier__n_estimators': [100, 150],
+    'randomforestclassifier__max_depth': [10, 15],
+    'randomforestclassifier__min_samples_split': [2, 5]
 }
 
 # Pipeline
 model_pipeline = make_pipeline(preprocessor, rf_model)
 
 with mlflow.start_run():
-    # Grid Search
-    grid_search = GridSearchCV(model_pipeline, param_grid, cv=5, n_jobs=-1, scoring='roc_auc')
+    # Grid Search with reduced CV for faster execution
+    grid_search = GridSearchCV(model_pipeline, param_grid, cv=3, n_jobs=-1, scoring='roc_auc')
     grid_search.fit(Xtrain, ytrain)
 
     # Log parameter sets
@@ -88,14 +87,14 @@ with mlflow.start_run():
     train_accuracy = accuracy_score(ytrain, y_pred_train)
     test_accuracy = accuracy_score(ytest, y_pred_test)
 
-    train_precision = precision_score(ytrain, y_pred_train)
-    test_precision = precision_score(ytest, y_pred_test)
+    train_precision = precision_score(ytrain, y_pred_train, zero_division=0)
+    test_precision = precision_score(ytest, y_pred_test, zero_division=0)
 
-    train_recall = recall_score(ytrain, y_pred_train)
-    test_recall = recall_score(ytest, y_pred_test)
+    train_recall = recall_score(ytrain, y_pred_train, zero_division=0)
+    test_recall = recall_score(ytest, y_pred_test, zero_division=0)
 
-    train_f1 = f1_score(ytrain, y_pred_train)
-    test_f1 = f1_score(ytest, y_pred_test)
+    train_f1 = f1_score(ytrain, y_pred_train, zero_division=0)
+    test_f1 = f1_score(ytest, y_pred_test, zero_division=0)
 
     test_roc_auc = roc_auc_score(ytest, y_pred_proba_test)
 
