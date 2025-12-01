@@ -40,6 +40,12 @@ Xtest.to_csv("Xtest.csv", index=False)
 ytrain.to_csv("ytrain.csv", index=False)
 ytest.to_csv("ytest.csv", index=False)
 
+### for fast testing, am taking a subset until the whole project is ready for saving some time
+Xtrain = pd.read_csv(Xtrain_path, nrows=500)
+Xtest = pd.read_csv(Xtest_path, nrows=100)
+ytrain = pd.read_csv(ytrain_path, nrows=500)
+ytest = pd.read_csv(ytest_path, nrows=100)
+
 files = ["Xtrain.csv", "Xtest.csv", "ytrain.csv", "ytest.csv"]
 
 for file_path in files:
