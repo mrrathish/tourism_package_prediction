@@ -22,23 +22,24 @@ except Exception as e:
 api = HfApi()
 
 try:
-    Xtrain_path = "hf://datasets/<---repo id---->/tourism-customer-prediction/Xtrain.csv"
-    Xtest_path = "hf://datasets/<---repo id---->/tourism-customer-prediction/Xtest.csv"
-    ytrain_path = "hf://datasets/<---repo id---->/tourism-customer-prediction/ytrain.csv"
-    ytest_path = "hf://datasets/<---repo id---->/tourism-customer-prediction/ytest.csv"
+    # Try to load from Hugging Face first
+    Xtrain_path = "hf://datasets/Retheesh/tourism-customer-prediction/Xtrain.csv"
+    Xtest_path = "hf://datasets/Retheesh/tourism-customer-prediction/Xtest.csv"
+    ytrain_path = "hf://datasets/Retheesh/tourism-customer-prediction/ytrain.csv"
+    ytest_path = "hf://datasets/Retheesh/tourism-customer-prediction/ytest.csv"
 
     Xtrain = pd.read_csv(Xtrain_path)
     Xtest = pd.read_csv(Xtest_path)
     ytrain = pd.read_csv(ytrain_path).squeeze()
     ytest = pd.read_csv(ytest_path).squeeze()
 
-    print("Data loaded successfully")
+    print("Data loaded successfully from Hugging Face")
     print(f"Training data shape: {Xtrain.shape}")
     print(f"Test data shape: {Xtest.shape}")
 
 except Exception as e:
-    print(f"Error loading data: {e}")
-    # Fallback to local files if Hugging Face load fails
+    print(f"Error loading data from Hugging Face: {e}")
+    # Fallback to local files
     try:
         Xtrain = pd.read_csv("Xtrain.csv")
         Xtest = pd.read_csv("Xtest.csv")
@@ -62,6 +63,13 @@ categorical_features = [
     'PitchSatisfactionScore', 'ProductPitched'
 ]
 
+# Filter features that actually exist in the data
+numeric_features = [f for f in numeric_features if f in Xtrain.columns]
+categorical_features = [f for f in categorical_features if f in Xtrain.columns]
+
+print(f"Using numeric features: {numeric_features}")
+print(f"Using categorical features: {categorical_features}")
+
 # Preprocessor
 preprocessor = make_column_transformer(
     (StandardScaler(), numeric_features),
@@ -84,17 +92,9 @@ try:
     with mlflow.start_run():
         # Grid Search with reduced CV for faster execution
         grid_search = GridSearchCV(model_pipeline, param_grid, cv=3, n_jobs=-1, scoring='roc_auc')
+        print("Starting model training...")
         grid_search.fit(Xtrain, ytrain)
-
-        # Log parameter sets
-        results = grid_search.cv_results_
-        for i in range(len(results['params'])):
-            param_set = results['params'][i]
-            mean_score = results['mean_test_score'][i]
-
-            with mlflow.start_run(nested=True):
-                mlflow.log_params(param_set)
-                mlflow.log_metric("mean_roc_auc", mean_score)
+        print("Model training completed")
 
         # Best model
         mlflow.log_params(grid_search.best_params_)
@@ -133,6 +133,8 @@ try:
             "test_roc_auc": test_roc_auc
         })
 
+        print(f"Model performance - Test Accuracy: {test_accuracy:.3f}, Test ROC-AUC: {test_roc_auc:.3f}")
+
         # Save the model locally
         model_path = "tourism_customer_prediction_model.joblib"
         joblib.dump(best_model, model_path)
@@ -142,17 +144,17 @@ try:
         print(f"Model saved as artifact at: {model_path}")
 
         # Upload to Hugging Face
-        repo_id = "<---repo id---->/tourism-customer-prediction-model"
+        repo_id = "Retheesh/tourism-customer-prediction-model"
         repo_type = "model"
 
         # Step 1: Check if the space exists
         try:
             api.repo_info(repo_id=repo_id, repo_type=repo_type)
-            print(f"Space '{repo_id}' already exists. Using it.")
+            print(f"Model repository '{repo_id}' already exists. Using it.")
         except RepositoryNotFoundError:
-            print(f"Space '{repo_id}' not found. Creating new space...")
+            print(f"Model repository '{repo_id}' not found. Creating new repository...")
             create_repo(repo_id=repo_id, repo_type=repo_type, private=False)
-            print(f"Space '{repo_id}' created.")
+            print(f"Model repository '{repo_id}' created.")
 
         api.upload_file(
             path_or_fileobj="tourism_customer_prediction_model.joblib",
